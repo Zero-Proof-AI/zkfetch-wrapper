@@ -9,10 +9,11 @@ env = cdk.Environment(
 )
 
 app = cdk.App()
+
+# env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), 
+# region=os.getenv('CDK_DEFAULT_REGION')),
 ZkFetchWrapperStack(app, "ZkFetchWrapperStack",
-    // env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), 
     env=env,
-    region=os.getenv('CDK_DEFAULT_REGION')),
 )
 
 app.synth()
