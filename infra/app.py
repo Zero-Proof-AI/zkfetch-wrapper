@@ -5,7 +5,7 @@ from zkfetch_wrapper_stack import ZkFetchWrapperStack
 
 env = cdk.Environment(
     account="940333627479",
-    region="us-east-1",
+    region="us-east-2",
 )
 
 app = cdk.App()
