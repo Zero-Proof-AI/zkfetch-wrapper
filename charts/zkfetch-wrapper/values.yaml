@@ -1,0 +1,54 @@
+# Default values for zkfetch-wrapper.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: "940333627479.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-940333627479-us-east-1"  # Will be set to the ECR image URI
+  pullPolicy: IfNotPresent
+  tag: "27a3b0feb61ddfed5596d2a2a7925e1f830b829ce544497ee18f9b1aea835968"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8003
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: zktls.zeroproofai.com/
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
