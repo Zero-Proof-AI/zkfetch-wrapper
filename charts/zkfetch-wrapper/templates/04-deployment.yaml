@@ -35,13 +35,64 @@ spec:
             - name: http
               containerPort: 8003
               protocol: TCP
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: zkfetch-wrapper-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: zkfetch-wrapper-config
+                  key: PORT
+            - name: USE_TEE
+              valueFrom:
+                configMapKeyRef:
+                  name: zkfetch-wrapper-config
+                  key: USE_TEE
+            - name: RECLAIM_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: zkfetch-wrapper-config
+                  key: RECLAIM_ADDRESS
+            - name: RECLAIM_OPTIMISM_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: zkfetch-wrapper-config
+                  key: RECLAIM_OPTIMISM_ADDRESS
+            - name: RECLAIM_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zkfetch-wrapper
+                  key: RECLAIM_APP_ID
+            - name: RECLAIM_APP_SECRET     
+              valueFrom:
+                secretKeyRef:
+                  name: zkfetch-wrapper
+                  key: RECLAIM_APP_SECRET 
+            - name: SEPOLIA_RPC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: zkfetch-wrapper
+                  key: SEPOLIA_RPC_URL
+            - name: OPTIMISM_SEPOLIA_RPC
+              valueFrom:
+                secretKeyRef:
+                  name: zkfetch-wrapper
+                  key: OPTIMISM_SEPOLIA_RPC
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zkfetch-wrapper
+                  key: PRIVATE_KEY
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
