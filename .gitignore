@@ -80,6 +80,10 @@ public
 .out
 .storybook-out
 
+# CDK outputs
+cdk.out
+infra/cdk.out
+
 # Temporary folders
 tmp/
 temp/
@@ -121,9 +125,6 @@ coverage/
 server.log
 generated_proof.json
 proof-structure.json
-
-# Docker
-.dockerignore
 
 # Local development
 *.local

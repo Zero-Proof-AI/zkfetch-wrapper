@@ -17,6 +17,7 @@ class ZkFetchWrapperStack(Stack):
             "ZkFetchWrapperImage",
             directory="..",  # Path to the directory containing the Dockerfile
             file="Dockerfile",
+            exclude=["cdk.out"],
         )
 
         # Output the image URI
