@@ -357,7 +357,7 @@ Assume this sample JSON response:
 1. **Redact a top-level field**:
    ```js
    redactions: [
-     { jsonPath: '$.booking.price' }  // Hides the price
+     { jsonPath: '$.booking' }  // Hides the booking
    ]
    ```
 
