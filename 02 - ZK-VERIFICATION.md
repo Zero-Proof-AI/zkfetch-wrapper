@@ -52,12 +52,12 @@ Reclaim Protocol uses **both** zkSNARKs (Groth16) **and** ECDSA signatures for c
 ┌─────────────────────────────────────────────────────────────┐
 │ CLIENT SIDE                                                 │
 ├─────────────────────────────────────────────────────────────┤
-│ 1. Connect to target API through attestor proxy            │
+│ 1. Connect to target API through attestor proxy             │
 │ 2. Send HTTPS request (TLS encrypted)                       │
 │ 3. Receive HTTPS response (TLS encrypted)                   │
 │ 4. Decrypt response locally (have TLS session keys)         │
 │ 5. Generate ZK proof locally:                               │
-│    - Use @reclaimprotocol/zk-symmetric-crypto              │
+│    - Use @reclaimprotocol/zk-symmetric-crypto               │
 │    - Circom circuits + snarkjs (Groth16)                    │
 │    - Prove knowledge of encryption keys                     │
 │    - Enable selective disclosure (redact fields)            │
@@ -70,7 +70,7 @@ Reclaim Protocol uses **both** zkSNARKs (Groth16) **and** ECDSA signatures for c
 ├─────────────────────────────────────────────────────────────┤
 │ 8. Has observed encrypted TLS traffic (proxied connection)  │
 │ 9. Receives claim with embedded ZK proof from client        │
-│10. ✅ VERIFIES ZK PROOF using attestor-core (Groth16)       │
+│10. VERIFIES ZK PROOF using attestor-core (Groth16)          │
 │11. Validates claim matches observed encrypted traffic       │
 │12. Signs transcript hash with ECDSA (ONLY if ZK valid)      │
 │13. Returns signed claim to client                           │
