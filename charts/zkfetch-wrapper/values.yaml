@@ -5,9 +5,9 @@
 replicaCount: 1
 
 image:
-  repository: "940333627479.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-940333627479-us-east-1"  # Will be set to the ECR image URI
-  pullPolicy: IfNotPresent
-  tag: "27a3b0feb61ddfed5596d2a2a7925e1f830b829ce544497ee18f9b1aea835968"
+  repository: "940333627479.dkr.ecr.us-east-1.amazonaws.com/zkfetch-wrapper"  # Will be set to the ECR image URI
+  pullPolicy: Always
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -48,12 +48,12 @@ ingress:
     #   more_set_headers "X-Frame-Options: sameorigin";
     #   more_set_headers "X-Content-Type-Options: nosniff";
   hosts:
-    - host: zktls.zeroproofai.com
+    - host: dev.zktls.zeroproofai.com
       paths: ["/"]
   tls:
     - secretName: zktls-zeroproofai-dev-tls
       hosts:
-        - zktls.zeroproofai.com
+        - dev.zktls.zeroproofai.com
 
 resources: {}
 
