@@ -64,11 +64,11 @@ jobs:
         working-directory: ./infra
         run: |
           if [[ "${{ github.ref_type }}" == "branch" && "${{ github.ref_name }}" == "main" ]]; then
-            TAG="latest"
+            TAG="latest"  # Just a marker
           elif [[ "${{ github.ref_type }}" == "tag" ]]; then
             TAG="${{ github.ref_name }}"
           else
-            TAG="latest"
+            TAG="dev-$(git rev-parse --short HEAD)"
           fi
-          echo "Deploying with image tag: $TAG"
-          cdk deploy --all --require-approval never --verbose --outputs-file ../cdk-outputs.json --context image_tag=$TAG
+          echo "Deploying with image_tag=$TAG"
+          cdk deploy --all --require-approval never --verbose --context image_tag=$TAG
