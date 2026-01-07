@@ -20,7 +20,7 @@ class ZkFetchWrapperStack(Stack):
             self,
             "ZkFetchWrapperRepo",
             repository_name="zkfetch-wrapper",  # lowercase, as required by ECR
-            image_tag_mutability=ecr.TagMutability.IMMUTABLE,
+            image_tag_mutability=ecr.TagMutability.MUTABLE,
             removal_policy=RemovalPolicy.RETAIN,  # Safe default – keeps images on cdk destroy
         )
 
