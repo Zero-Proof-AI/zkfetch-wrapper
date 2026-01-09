@@ -147,9 +147,11 @@ app.post('/zkfetch', async (req, res) => {
       }
       
       // DEBUG: Save generated proof for comparison
-      const fs = require('fs');
-      fs.writeFileSync('generated_proof.json', JSON.stringify(proof, null, 2));
-      console.log('  Saved generated proof to ./generated_proof.json');
+      if(process.env.TESTMODE === 'true') {
+        const fs = require('fs');
+        fs.writeFileSync('generated_proof.json', JSON.stringify(proof, null, 2));
+        console.log('  Saved generated proof to ./generated_proof.json');
+      }
     } catch (zkFetchError) {
       // Log full error for debugging
       console.error('zkFetch SDK Error:', zkFetchError.message);
