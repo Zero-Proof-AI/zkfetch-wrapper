@@ -1,24 +1,65 @@
-# Reclaim Protocol Signature Analysis
+# Reclaim Signature Analysis
 
-## Overview
+## Scope
+This document explains what witness signatures prove in this repository and how signature validation is performed in practice.
 
-This document analyzes how Reclaim Protocol signatures work and their relationship to claimed data, specifically focusing on the `responseMatches` patterns used for selective disclosure.
+## Core Idea
+Reclaim proof validation here is signature-centric:
+- Witnesses attest to claim material and sign it.
+- Verifiers validate signed claim integrity.
+- Selective disclosure controls which extracted values are visible to verifiers.
 
-## Signature Message Construction
+## How It Works
 
-The message that gets signed by witnesses follows this format:
+1. Claim definition is created from provider, request parameters, matching rules, and context.
+2. Claim identity (`identifier`) is derived from that claim information.
+3. Witnesses sign claim-bound metadata (identifier, owner, timestamp, epoch).
+4. Proof bundle includes signatures plus witness metadata.
+5. Verifier recovers signer addresses from signatures.
+6. Verifier compares recovered signers against expected witness set.
+7. Verification succeeds only when claim consistency and signer matching both pass.
 
-```
+This model ensures signatures are tied to the exact claim identity, not just to a free-form response string.
+
+## Why This Design
+
+- Efficiency:
+    - Signing a compact claim identity + metadata is cheaper than signing large raw payloads.
+    - Verification is lightweight (ECDSA recovery and witness-set checks).
+
+- Integrity binding:
+    - Any change in claim structure (for example `responseMatches`, redactions, URL, method, context) changes claim identity and invalidates signatures.
+
+- Replay resistance:
+    - Timestamp and epoch are part of the signed material, reducing replay risk across witness windows.
+
+- Privacy compatibility:
+    - Selective disclosure can hide sensitive content while preserving verifiable signed claim identity.
+
+- Verifier practicality:
+    - Off-chain and on-chain consumers can validate claim authenticity without re-running full remote session logic.
+
+## Signature-Binding Model
+
+The signed payload is bound to claim identity and metadata, not to a raw response body dump.
+
+Conceptually, signatures bind these fields:
+- identifier
+- owner
+- timestamp
+- epoch
+
+This is why tampering with claim metadata causes verification failure.
+
+### Canonical Message Shape (Retained Detail)
+
+The witness-signed message used by SDK verification is represented as:
+
+```text
 identifier\nowner\ntimestamp\nepoch
 ```
 
-Where:
-- `identifier`: Cryptographic hash representing the claim
-- `owner`: Application address that requested the proof
-- `timestamp`: Unix timestamp when the claim was made
-- `epoch`: Witness epoch number
-
-## Example from Proof Analysis
+Example reconstruction:
 
 ```javascript
 const message =
@@ -28,126 +69,192 @@ const message =
     proof.claimData.epoch;
 ```
 
-**Sample values:**
-- Identifier: `0xd98d4800e8163a653f26b9f4e7f6a4d14dcacb0fb938371ad3b6d3792b8d1a72`
-- Owner: `0x6202d6e4b1c98f4e7e22d7b969dec142aa282ec6`
-- Timestamp: `1766587608` (2025-12-24T14:46:48.000Z)
-- Epoch: `1`
+Ethereum-style verification (`ethers.verifyMessage`) applies the EIP-191 signed-message prefix internally before signature recovery.
 
-## Relationship to Claim Data
+## Signature Flow Diagram
 
-The signature **does NOT directly sign** the `responseMatches` regex patterns, but instead signs an **identifier** that represents the entire claim.
+```mermaid
+flowchart TD
+    A[Claim Data<br/>provider + parameters + context] --> B[Claim Identifier]
+    B --> C[Signed Message Components<br/>identifier + owner + timestamp + epoch]
+    C --> D[Witness Signature ECDSA]
+    D --> E[Proof Bundle]
+    E --> F[Verifier]
+    F --> G[Recover Signer Address]
+    G --> H[Compare with Expected Witness Set]
+    H --> I[Signature Validity Verdict]
+```
 
-### Claim Data Structure
+## End-to-End Verification Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Wrapper
+    participant R as Reclaim Witness/Attestor Path
+    participant P as Proof Bundle
+    participant O as Off-chain Verifier
+    participant C as Contract Verifier
+
+    W->>R: Submit claim context for attestation
+    R-->>W: Signed claim material
+    W->>P: Package proof + signatures + witness metadata
+
+    O->>P: verifyProof(proof)
+    O->>O: Recompute/validate claim consistency
+    O->>O: Recover signer(s) from signature(s)
+    O->>O: Compare with expected witness set
+    O-->>W: isVerified / verification result
+
+    W->>C: transformForOnchain(proof)
+    C->>C: Verify signed claim fields per contract rules
+    C-->>W: accept / revert
+```
+
+## Relationship to responseMatches
+
+`responseMatches` and redaction settings affect claim content and extracted outputs, but signatures still validate claim identity and signer authenticity.
+
+In short:
+- `responseMatches` influences what is proven/revealed.
+- Signatures attest to the resulting claim identity and metadata.
+
+### Claim Data Relationship (Retained Detail)
+
+Signatures do not sign `responseMatches` directly as a standalone field. Instead:
+1. `responseMatches` and redaction rules become part of claim parameters/context.
+2. Claim identity (`identifier`) is derived from claim information.
+3. Witness signatures bind to that identifier + metadata tuple.
+
+So changing `responseMatches` semantics changes claim identity and invalidates existing signatures.
+
+Representative claim shape:
 
 ```json
 {
-  "provider": "http",
-  "parameters": {
-    "method": "GET",
-    "url": "https://httpbin.org/get",
-    "responseMatches": [
-      {
-        "type": "regex",
-        "value": "\"origin\":\\s*\"(?<origin>[^\"]+)\""
-      }
-    ],
-    "responseRedactions": []
-  },
-  "context": {
-    "extractedParameters": {
-      "origin": "13.233.193.107"
-    },
-    "providerHash": "0x245a11f715ca085fabe2986526a51e43f286650f992dde2d036daf2f16fc1370"
-  },
-  "identifier": "0xd98d4800e8163a653f26b9f4e7f6a4d14dcacb0fb938371ad3b6d3792b8d1a72"
+    "provider": "http",
+    "parameters": "{... responseMatches/responseRedactions ...}",
+    "context": "{... extractedParameters/providerHash ...}",
+    "identifier": "0x..."
 }
 ```
 
-### How It Works
+### Selective Disclosure Regex Example
 
-1. **Claim Definition**: `responseMatches` defines what data to extract from HTTP responses
-2. **Claim Assembly**: This gets embedded in the `parameters` field
-3. **Identifier Generation**: The `identifier` is a hash of the claim data (provider + parameters + context)
-4. **Signature Creation**: Witness signs the identifier + metadata
+A representative extraction rule used in tests is:
 
-## Signature Verification Process
-
-### 1. Message Reconstruction
-```javascript
-const message = `${identifier}\n${owner}\n${timestamp}\n${epoch}`;
-```
-
-### 2. Ethereum Signed Message
-The SDK uses `ethers.verifyMessage()` which:
-- Converts message to bytes
-- Adds Ethereum prefix: `"\x19Ethereum Signed Message:\n" + length`
-- Hashes with keccak256
-- Recovers signer address from signature
-
-### 3. Witness Validation
-- Recovered signer: `0x244897572368eadf65bfbc5aec98d8e5443a9072`
-- Expected witness: `0x244897572368eadf65bfbc5aec98d8e5443a9072`
-- Match: ✅ YES
-
-## SDK Verification Flow
-
-The `verifyProof()` function:
-
-1. **Witness Retrieval**: Calls `getWitnessesForClaim(epoch, identifier, timestamp)`
-2. **Contract Query**: Queries Reclaim contract on Optimism Sepolia
-3. **Deterministic Selection**: Contract runs `fetchWitnessesForClaim()`
-4. **Signature Verification**: Compares recovered signers with expected witnesses
-
-## Key Insights
-
-### Why This Design?
-
-- **Efficiency**: Sign hash instead of large claim data
-- **Binding**: Cryptographically binds witness to specific claim
-- **Verification**: Enables checking that witness attested to expected `responseMatches`
-
-### Selective Disclosure
-
-The `responseMatches` pattern:
 ```regex
 "origin":\s*"(?<origin>[^"]+)"
 ```
 
-- **Extracts**: Origin IP address from HTTP response
-- **Proves**: The witness verified a claim that includes this extraction rule
-- **Privacy**: Only extracted values are revealed, not the full response
+This influences claim parameters/context, which then affect `identifier`; signatures remain bound to the resulting claim identity tuple.
 
-### Identifier Computation
+## What Signatures Prove
 
-The identifier appears to be computed server-side during proof generation. Attempts to locally compute it from claim data (even with canonicalization) don't match the actual identifier, suggesting it's generated by the Reclaim attestor infrastructure.
+Signatures provide evidence that:
+- A valid witness/attestor signer attested this claim identity.
+- The signed claim metadata is consistent (identifier-owner-timestamp-epoch binding).
+- The proof was not modified after signing.
 
-## Security Implications
+Signatures do not prove:
+- Business truth of upstream API data.
+- That every hidden field is visible to verifier (by design).
 
-1. **Claim Integrity**: Signature ensures the witness attested to the exact claim
-2. **Replay Protection**: Timestamp prevents replay attacks
-3. **Witness Accountability**: Epoch ensures witnesses are from the correct set
-4. **Application Binding**: Owner field ties proof to requesting application
+## Practical Verification in This Repo
 
-## Questions for Further Investigation
+Off-chain checks:
+- Wrapper and tests use js-sdk verification flow.
+- With js-sdk 5.x, normalize structured results (for example `isVerified`).
 
-1. **Identifier Computation**: How exactly is the identifier hash computed?
-2. **Witness Selection**: Does the Optimism Sepolia contract have the correct witnesses?
-3. **Epoch Management**: How are witness epochs managed and rotated?
-4. **Cross-Verification**: How does off-chain verification relate to on-chain verification?
+On-chain checks:
+- Use transformed structures (`claimInfo`, `signedClaim`) and contract verification paths.
+- Contract validates signed claim material per ABI expectations.
 
-## Code Example
+### SDK Verification Steps (Retained Detail)
+
+Practical flow performed by js-sdk verification logic:
+1. Resolve expected witness set for claim epoch/selection rules.
+2. Recompute claim identity consistency from claim info.
+3. Recover signer address(es) from signatures.
+4. Compare recovered signers with expected witness set.
+5. Return verification result (`boolean` in older flows, structured result in 5.x flows).
+
+### Witness Selection Deep Dive
+
+In contract-backed verification paths, witness expectation commonly follows this model:
+1. Resolve claim epoch and timestamp window.
+2. Derive deterministic witness set for the claim selection rule.
+3. Compare recovered signer addresses to that expected set.
+
+Representative function names seen across SDK/contract implementations include patterns such as `getWitnessesForClaim(...)` and `fetchWitnessesForClaim(...)`.
+
+Note: Exact implementation details can vary by SDK/chain version; keep this section aligned with the deployed contract and current js-sdk behavior.
+
+## Minimal Example
 
 ```javascript
-// Recreate signature verification
 const { ethers } = require('ethers');
 
-const message = `${proof.claimData.identifier}\n${proof.claimData.owner}\n${proof.claimData.timestampS}\n${proof.claimData.epoch}`;
+const msg = `${proof.claimData.identifier}\n${proof.claimData.owner}\n${proof.claimData.timestampS}\n${proof.claimData.epoch}`;
+const recovered = ethers.verifyMessage(msg, proof.signatures[0]).toLowerCase();
+const expected = proof.witnesses[0].id.toLowerCase();
 
-const recoveredSigner = ethers.verifyMessage(message, proof.signatures[0]);
-const expectedWitness = proof.witnesses[0].id;
-
-console.log('Signature valid:', recoveredSigner.toLowerCase() === expectedWitness.toLowerCase());
+console.log('signatureValid', recovered === expected);
 ```
 
-This analysis shows how Reclaim Protocol provides cryptographic proof that witnesses attested to claims with specific data extraction rules, enabling privacy-preserving verification of web data.
+## Real Signature Payload (Snapshot: 2026-07-21)
+
+Note: identifiers, timestamps, signatures, and extracted values vary by run.
+
+Source artifact:
+- `proof-structure.json`
+
+Extracted values from real test output:
+
+```json
+{
+    "identifier": "0xfd847f3bbdf497d5616c2d7f8124dfa27a441ff25accade97a01db3fe657891b",
+    "owner": "0x6202d6e4b1c98f4e7e22d7b969dec142aa282ec6",
+    "timestampS": 1784671457,
+    "epoch": 1,
+    "signature": "0xfeb59602d31488865555beeca1f6cf648e80318990d60956108c914738cb46742d55295e16dfe7a3daa8f5cd30c2b1e49587eeae9e06b7a01efc333868ae77dd1c",
+    "witnessId": "0x244897572368eadf65bfbc5aec98d8e5443a9072",
+    "recoveredSigner": "0x244897572368Eadf65bfBc5aec98D8e5443a9072"
+}
+```
+
+Canonical message reconstructed for verification:
+
+```text
+0xfd847f3bbdf497d5616c2d7f8124dfa27a441ff25accade97a01db3fe657891b
+0x6202d6e4b1c98f4e7e22d7b969dec142aa282ec6
+1784671457
+1
+```
+
+## Troubleshooting
+
+- If verification unexpectedly fails or hangs, ensure no stale local server process is serving old code.
+- Ensure js-sdk and zk-fetch versions are aligned with current repo dependencies.
+- Re-run proof generation after dependency upgrades before re-verifying old artifacts.
+
+## Security Implications (Retained Detail)
+
+What signature validation gives you:
+- Claim integrity binding (identifier + owner + timestamp + epoch).
+- Replay resistance via timestamp and epoch constraints.
+- Witness accountability through signer recovery and witness-set matching.
+
+What it does not automatically give you:
+- Business correctness of upstream API output.
+- Elimination of witness trust assumptions.
+
+## Open Questions for Deep Dives
+
+- Exact identifier derivation details across SDK/attestor versions.
+- Witness-set rotation/epoch policy and chain configuration drift risks.
+- Behavioral differences between off-chain js-sdk checks and specific on-chain contract implementations.
+
+## Key Takeaway
+
+In this wrapper, signatures are the primary verifiable anchor: they bind witness attestation to claim identity, while selective disclosure controls what data is revealed to the verifier.

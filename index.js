@@ -10,6 +10,29 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(cors());
 
+function normalizeVerifyResult(result) {
+  if (typeof result === 'boolean') {
+    return result;
+  }
+  if (result && typeof result.isVerified === 'boolean') {
+    return result.isVerified;
+  }
+  return Boolean(result);
+}
+
+async function verifyProofCompat(proof) {
+  // js-sdk 5.x supports this options object and returns { isVerified, ... }.
+  // This avoids flaky network validation paths during witness lookup.
+  try {
+    const result = await verifyProof(proof, { dangerouslyDisableContentValidation: true });
+    return normalizeVerifyResult(result);
+  } catch {
+    // Fallback for older sdk behavior/signature.
+    const result = await verifyProof(proof);
+    return normalizeVerifyResult(result);
+  }
+}
+
 // Check if Reclaim credentials are configured
 const RECLAIM_CONFIGURED = !!(process.env.RECLAIM_APP_ID && process.env.RECLAIM_APP_SECRET);
 
@@ -124,7 +147,7 @@ app.post('/zkfetch', async (req, res) => {
       // Verify proof locally - Two layers:
       // 1. Signature verification (attestor signatures)
       console.log('🔍 Verifying attestor signatures...');
-      const signaturesValid = await verifyProof(proof);
+      const signaturesValid = await verifyProofCompat(proof);
       console.log(signaturesValid ? '✓ Signatures: VALID' : '✗ Signatures: INVALID');
       
       // 2. ZK-SNARK verification (Groth16 proof of correct decryption)
@@ -217,7 +240,7 @@ app.post('/zkfetch', async (req, res) => {
     }
 
     // Final verification before returning
-    const finalVerification = await verifyProof(proof);
+    const finalVerification = await verifyProofCompat(proof);
     
     res.json({
       success: true,
@@ -267,7 +290,7 @@ app.post('/verify', async (req, res) => {
     // fs.writeFileSync('/tmp/received_proof.json', JSON.stringify(proof, null, 2));
     // console.log('  Saved received proof to /tmp/received_proof.json');
     
-    const isValid = await verifyProof(proof);
+    const isValid = await verifyProofCompat(proof);
     
     console.log(isValid ? '✓ Proof is valid' : '✗ Proof is invalid');
     

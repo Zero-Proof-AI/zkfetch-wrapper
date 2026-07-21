@@ -3,7 +3,8 @@
  * Generates fresh proof and tests on-chain transformation
  */
 
-const { verifyProof, transformForOnchain } = require('@reclaimprotocol/js-sdk');
+const { transformForOnchain } = require('@reclaimprotocol/js-sdk');
+const { verifyProofForTests } = require('./verify-proof');
 const { generateProof } = require('./generate-proof');
 const { ethers } = require('ethers');
 const fs = require('fs');
@@ -77,7 +78,7 @@ async function testOnChainQuick() {
 
         // Step 2: Verify off-chain first
         console.log('\n📝 Step 2: Verifying proof off-chain...');
-        const isValid = await verifyProof(proof);
+        const isValid = await verifyProofForTests(proof, { timeoutMs: 60000 });
         
         if (!isValid) {
             throw new Error('Proof failed off-chain verification');

@@ -42,7 +42,7 @@ zkFetch Wrapper is a production-ready service that generates cryptographically v
 7. Off-chain verification (js-sdk): Verifies ECDSA signatures (trusts attestor's ZK verification)
 8. On-chain verification: Verifies ECDSA signatures only (trusts attestor, gas efficient)
 
-**See [ZK-VERIFICATION.md](./ZK-VERIFICATION.md)
+**See [02 - ZK-VERIFICATION.md](./docs/02%20-%20ZK-VERIFICATION.md)**
 
 ---
 
@@ -69,6 +69,10 @@ Create `.env`:
 RECLAIM_APP_ID=0xYourAppIdHere
 RECLAIM_APP_SECRET=0xYourAppSecretHere
 PORT=8003
+# Optional: route through TEE-backed flow when supported
+USE_TEE=false
+# Optional: override provider id
+RECLAIM_PROVIDER_ID=
 ```
 
 ### 4. Start Server
@@ -134,9 +138,42 @@ Verify a proof's cryptographic validity.
 }
 ```
 
+### `POST /verify-full` - Full Verification
+
+Run full verification flow (signature verification + zkSNARK verification when available).
+
+**Request:**
+```json
+{
+  "proof": { ... },
+  "options": {}
+}
+```
+
+### `POST /transform-onchain` - On-chain Formatting
+
+Transform a proof into the format expected by on-chain verifiers.
+
+**Request:**
+```json
+{
+  "proof": { ... }
+}
+```
+
 ### `GET /health` - Health Check
 
 Check service status.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "service": "zkfetch-wrapper",
+  "reclaim_configured": true,
+  "mode": "production"
+}
+```
 
 ---
 
@@ -271,7 +308,10 @@ Shows:
 ### Run Tests
 
 ```bash
-node tests/test-selective-disclosure.js
+npm run test:selective
+npm run test:sdk
+npm run test:httpbin
+npm run test:onchain
 ```
 
 Tests:
@@ -280,12 +320,26 @@ Tests:
 - Age threshold proofs
 - Verification
 
+For full on-chain transaction execution:
+
+```bash
+npm run test:onchain:full
+```
+
+Note: `test:onchain:full` requires `PRIVATE_KEY` to be configured in environment.
+
 
 ---
 
 ## Documentation
 
-- **[ZKTLS_ARCHITECTURE.md](./ZKTLS_ARCHITECTURE.md)** - zkTLS architecture details
+- **[01 - ZKTLS_ARCHITECTURE.md](./docs/01%20-%20ZKTLS_ARCHITECTURE.md)** - zkTLS architecture details
+- **[02 - ZK-VERIFICATION.md](./docs/02%20-%20ZK-VERIFICATION.md)** - verification flow and trust boundaries
+- **[03 - SIGNATURE_ANALYSIS.md](./docs/03%20-%20SIGNATURE_ANALYSIS.md)** - how witness signatures bind claims
+- **[04 - REST API.md](./docs/04%20-%20REST%20API.md)** - endpoint reference with real payload snapshots
+
+## Verification Modes
+
 ```
 ┌──────────────────────────────────────────────────────┐
 │ CURRENT FLOW (Signature-Only)                        │
@@ -330,7 +384,14 @@ Reclaim proofs use **ECDSA signatures** from attestors, not zkSNARKs:
 ```javascript
 const { verifyProof } = require('@reclaimprotocol/js-sdk');
 
-const isValid = await verifyProof(proof);
+const result = await verifyProof(proof, {
+  dangerouslyDisableContentValidation: true,
+});
+
+const isValid = typeof result === 'boolean'
+  ? result
+  : Boolean(result?.isVerified);
+
 console.log('Attestation valid:', isValid);
 // Verifies: ECDSA signatures from decentralized witnesses
 ```

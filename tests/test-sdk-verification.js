@@ -1,5 +1,5 @@
-const { verifyProof } = require('@reclaimprotocol/js-sdk');
 const { generateProof } = require('./generate-proof');
+const { verifyProofForTests } = require('./verify-proof');
 const fs = require('fs');
 
 async function detailedVerification() {
@@ -23,7 +23,7 @@ async function detailedVerification() {
     console.log('📋 Calling SDK verifyProof...');
     
     try {
-        const isValid = await verifyProof(proof);
+        const isValid = await verifyProofForTests(proof, { timeoutMs: 60000 });
         console.log('\n✅ SDK Verification Result:', isValid);
         
         if (isValid) {
