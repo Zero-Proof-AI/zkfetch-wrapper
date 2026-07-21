@@ -16,6 +16,25 @@
 - ❌ **On-chain contracts**: Do NOT verify ZK proof (trusts attestor, gas efficient)
 - 🔒 **Trust Model**: Attestor only signs if ZK proof is valid
 
+### Runtime Baseline in This Repo (2026)
+
+- `@reclaimprotocol/zk-fetch`: `1.0.0`
+- `@reclaimprotocol/js-sdk`: `5.x`
+- js-sdk `verifyProof(...)` may return a structured object (for example, with `isVerified`) instead of only a boolean.
+- `useTee: true` is supported per request options.
+- Newer zkFetch flows include OPRF-style redaction controls.
+- Current Reclaim documentation tracks a modernized proving engine path (`stwo`).
+- Legacy `snarkjs`/Groth16 compatibility paths remain relevant in migration and interoperability scenarios.
+
+### Verification Compatibility in Wrapper (2026)
+
+Current wrapper logic normalizes verification output:
+- `normalizeVerifyResult(result)` converts both boolean and object-shaped verification results into a strict boolean.
+- `verifyProofCompat(proof)` first calls `verifyProof(proof, { dangerouslyDisableContentValidation: true })`.
+- Then falls back to `verifyProof(proof)`.
+
+This keeps verification behavior stable across js-sdk response shapes and witness/network variability.
+
 ---
 
 ## Detailed Architecture
@@ -149,6 +168,35 @@
 │              │  13. Return final signed proof
 └──────────────┘
 ```
+
+---
+
+### 3.1 Current Wrapper API Execution Flow (2026)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as Caller
+  participant W as zkfetch-wrapper
+  participant R as Reclaim Attestor Path
+  participant T as Target API
+  participant V as Verifier
+
+  U->>W: POST /zkfetch {url, publicOptions, privateOptions, redactions?}
+  W->>R: client.zkFetch(url, finalPublicOptions, finalPrivateOptions)
+  R->>T: Proxied HTTPS request
+  T-->>R: HTTPS response
+  R-->>W: Attested proof bundle
+  W->>V: verifyProofCompat(proof) (local/off-chain)
+  W-->>U: { proof, onchainProof, verified, metadata }
+```
+
+Current endpoint set in wrapper:
+- `POST /zkfetch`: Generate proof, run local verification, optionally transform for on-chain usage.
+- `POST /verify`: Off-chain verification endpoint using `verifyProofCompat`.
+- `POST /verify-full`: Extended verification route using local verifier path.
+- `POST /transform-onchain`: Convert proof for contract-facing structures.
+- `GET /health`: Service/mode health (`production` vs `mock`).
 
 ---
 
@@ -370,6 +418,28 @@ When traffic passes through attestors, they verify/attest:
 
 ---
 
+## Selective Disclosure Behavior in Current Tests (2026)
+
+Patterns that usually work well:
+- Use `responseMatches` to prove required facts exist.
+- Use redactions to hide sensitive fields while preserving proof utility.
+- Keep matching and redaction scopes intentional.
+
+Known practical caveat in current tests:
+- Certain combinations of sibling/child-field matches plus redactions can be brittle.
+- A known failing mode returns `Response does not contain ...`.
+- Prefer matching stable parent context and redacting nested sensitive values when possible.
+
+## On-Chain Boundary and Operations (2026)
+
+- `transformForOnchain(proof)` prepares proof material for contract-facing structures.
+- Wrapper on-chain flow validates claim/signature acceptance, not full remote HTTPS transcript re-execution on-chain.
+- Start wrapper from the correct working directory so `.env` is loaded as expected.
+- If behavior is inconsistent, confirm no stale server is bound to port `8003`.
+- Keep `zk-fetch` and `js-sdk` versions aligned when upgrading.
+
+---
+
 ## Real-World Flow Example
 
 ### Booking Flight with zkTLS
@@ -423,8 +493,70 @@ When traffic passes through attestors, they verify/attest:
 
 7. Agent A verifies proof on-chain
    - Checks attestor signatures (witnesses)
-   - Verifies ZK proof math
+  - Verifies contract-required signed claim fields
    - Confirms booking_id without seeing credit card
+
+### Payload Snapshot (2026-07-21)
+
+Source artifacts used during validation:
+- `proof-structure.json`
+- `generated_proof.json`
+
+Note: identifiers, timestamps, and extracted values vary by run.
+
+Example request intent (`tests/test-httpbin-origin.js` pattern):
+
+```json
+{
+  "url": "https://httpbin.org/get",
+  "publicOptions": {
+    "method": "GET",
+    "headers": {
+      "accept": "application/json"
+    }
+  },
+  "privateOptions": {
+    "responseMatches": [
+      { "type": "contains", "value": "\"origin\"" },
+      { "type": "regex", "value": "\"origin\":\\s*\"(?<origin>[^\"]+)\"" }
+    ]
+  }
+}
+```
+
+Observed proof artifact excerpt (`proof-structure.json`):
+
+```json
+{
+  "claimData": {
+    "provider": "http",
+    "owner": "0x6202d6e4b1c98f4e7e22d7b969dec142aa282ec6",
+    "timestampS": 1784671457,
+    "identifier": "0xfd847f3bbdf497d5616c2d7f8124dfa27a441ff25accade97a01db3fe657891b",
+    "epoch": 1
+  },
+  "extractedParameterValues": {
+    "origin": "65.1.230.217"
+  },
+  "witnesses": [
+    {
+      "id": "0x244897572368eadf65bfbc5aec98d8e5443a9072",
+      "url": "wss://attestor.reclaimprotocol.org:444/ws"
+    }
+  ]
+}
+```
+
+Observed wrapper verification response shape (`/verify`):
+
+```json
+{
+  "success": true,
+  "valid": true,
+  "extractedData": {
+    "origin": "65.1.230.217"
+  }
+}
 ```
 
 ---

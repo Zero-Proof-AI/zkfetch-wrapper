@@ -55,7 +55,13 @@ ingress:
       hosts:
         - dev.zktls.zeroproofai.com
 
-resources: {}
+resources:
+  limits:
+    cpu: "6"
+    memory: 4Gi
+  requests:
+    cpu: "4"
+    memory: 2Gi
 
 autoscaling:
   enabled: false

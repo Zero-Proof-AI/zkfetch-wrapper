@@ -52,7 +52,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
-{{- define "environmentName" -}}}
+{{- define "environmentName" -}}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 

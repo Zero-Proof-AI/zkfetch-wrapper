@@ -29,7 +29,7 @@
  */
 
 const { ReclaimClient } = require('@reclaimprotocol/zk-fetch');
-const { verifyProof } = require('@reclaimprotocol/js-sdk');
+const { verifyProofForTests } = require('./verify-proof');
 require('dotenv').config();
 
 async function testHttpbinOriginProof() {
@@ -98,7 +98,7 @@ async function testHttpbinOriginProof() {
 
     // Step 4: Verify the proof
     console.log('📋 Step 4: Verifying proof...');
-    const isValid = await verifyProof(proof);
+    const isValid = await verifyProofForTests(proof, { timeoutMs: 60000 });
     
     if (isValid) {
       console.log('✅ Proof verification PASSED!\n');
@@ -163,21 +163,6 @@ async function testHttpbinOriginProof() {
   }
 }
 
-// Run the test
-if (require.main === module) {
-  testHttpbinOriginProof()
-    .then(proof => {
-      console.log('✅ Test completed successfully!');
-      console.log('\n💾 Full proof object available for inspection');
-      console.log('   - proof.identifier:', proof.identifier.substring(0, 20) + '...');
-      console.log('   - proof.extractedParameterValues:', proof.extractedParameterValues);
-    })
-    .catch(error => {
-      console.error('❌ Test failed:', error.message);
-      process.exit(1);
-    });
-}
-
 async function testHttpbinContainsIP(ipAddress) {
   console.log(`🧪 Testing httpbin.org response contains "${ipAddress}"...\n`);
 
@@ -229,7 +214,7 @@ async function testHttpbinContainsIP(ipAddress) {
 
     // Step 4: Verify the proof
     console.log('📋 Step 4: Verifying proof...');
-    const isValid = await verifyProof(proof);
+    const isValid = await verifyProofForTests(proof, { timeoutMs: 60000 });
     
     if (isValid) {
       console.log('✅ Proof verification PASSED!\n');
@@ -315,7 +300,7 @@ async function testRequestMethodDisclosure() {
 
     // Step 3: Verify the proof
     console.log('📋 Step 3: Verifying proof...');
-    const isValid = await verifyProof(proof);
+    const isValid = await verifyProofForTests(proof, { timeoutMs: 60000 });
     
     if (!isValid) {
       console.log('❌ Proof verification FAILED!\n');
