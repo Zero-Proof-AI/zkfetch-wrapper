@@ -156,7 +156,7 @@ app.post('/zkfetch', async (req, res) => {
         console.log('🔍 Verifying Groth16 ZK-SNARK proof...');
         const zkResult = await verifyReclaimProof(proof, { logger: console });
         zkValid = zkResult.verified;
-        console.log(zkValid ? '✓ ZK-SNARK: VALID' : '✗ ZK-SNARK: INVALID');
+        console.log(zkValid ? '✓ ZK-SNARK: VALID' : `✗ ZK-SNARK: ${zkResult.reason || 'INVALID'}`);
       } catch (zkError) {
         console.warn('⚠️  ZK-SNARK verification skipped:', zkError.message);
         // ZK verification is optional - signature verification is primary
@@ -170,9 +170,11 @@ app.post('/zkfetch', async (req, res) => {
       }
       
       // DEBUG: Save generated proof for comparison
-      const fs = require('fs');
-      fs.writeFileSync('generated_proof.json', JSON.stringify(proof, null, 2));
-      console.log('  Saved generated proof to ./generated_proof.json');
+      if(process.env.TESTMODE === 'true') {
+        const fs = require('fs');
+        fs.writeFileSync('generated_proof.json', JSON.stringify(proof, null, 2));
+        console.log('  Saved generated proof to ./generated_proof.json');
+      }
     } catch (zkFetchError) {
       // Log full error for debugging
       console.error('zkFetch SDK Error:', zkFetchError.message);
