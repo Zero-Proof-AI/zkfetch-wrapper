@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const { ReclaimClient } = require('@reclaimprotocol/zk-fetch');
 const { verifyProof, transformForOnchain } = require('@reclaimprotocol/js-sdk');
-const { verifyProofFull } = require('./zksnark-verifier');
 const { verifyReclaimProof } = require('./zk-verify');
 require('dotenv').config();
 
@@ -334,37 +333,6 @@ app.post('/transform-onchain', async (req, res) => {
   }
 });
 
-// Full verification including zkSNARK (if available)
-app.post('/verify-full', async (req, res) => {
-  try {
-    const { proof, options } = req.body;
-
-    if (!proof) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required field: proof'
-      });
-    }
-
-    console.log('🔐 Full verification (signatures + zkSNARK)...');
-
-    const result = await verifyProofFull(proof, options || {});
-
-    console.log(result.valid ? '✓ Full verification passed' : '✗ Full verification failed');
-
-    res.json({
-      success: true,
-      ...result
-    });
-  } catch (error) {
-    console.error('✗ Full verification error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
 // Helper function to decode chunked HTTP responses
 function decodeChunkedResponse(chunkedData) {
   if (typeof chunkedData !== 'string') {
@@ -439,7 +407,6 @@ app.listen(PORT, () => {
   console.log('Endpoints:');
   console.log('  POST /zkfetch           - Generate zkTLS proof');
   console.log('  POST /verify            - Verify proof (signatures only)');
-  console.log('  POST /verify-full       - Full verification (signatures + zkSNARK if available)');
   console.log('  POST /transform-onchain - Transform proof for smart contract');
   console.log('  GET  /health            - Health check');
   console.log('');

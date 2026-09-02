@@ -9,7 +9,7 @@ RUN git config --global url."https://github.com/".insteadOf git@github.com: && \
     git config --global url."https://".insteadOf git://
 
 # Install dependencies
-RUN npm install 
+RUN npm ci --no-audit --no-fund
 
 # Copy source code
 COPY . .

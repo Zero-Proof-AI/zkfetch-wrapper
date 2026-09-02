@@ -149,18 +149,6 @@ Verify a proof's cryptographic validity.
 }
 ```
 
-### `POST /verify-full` - Full Verification
-
-Run full verification flow (signature verification + zkSNARK verification when available).
-
-**Request:**
-```json
-{
-  "proof": { ... },
-  "options": {}
-}
-```
-
 ### `POST /transform-onchain` - On-chain Formatting
 
 Transform a proof into the format expected by on-chain verifiers.
@@ -308,7 +296,7 @@ const response = await fetch('http://localhost:8003/zkfetch', {
 ### Run Demo
 
 ```bash
-node toolbox/demo-selective-disclosure.js
+node examples/selective-disclosure-demo.js
 ```
 
 Shows:
@@ -476,12 +464,34 @@ Prove data matches pattern without revealing exact value:
 
 ---
 
-## Deployment
+## Running with Docker
 
-The repo includes two reference deployment paths. Neither is required to run the service locally.
+The image bundles the Reclaim ZK circuit files from `lib/`, so it works offline apart from the attestor network itself.
 
-- `infra/` is an AWS CDK app that builds the Docker image and publishes it to an ECR repository named `zkfetch-wrapper` in whatever account your credentials point at. `.github/workflows/deploy.yml` runs it on manual dispatch using GitHub OIDC; set the `AWS_DEPLOY_ROLE_ARN` repository variable to an IAM role that trusts this repo.
-- `charts/zkfetch-wrapper/` is a Helm chart for running the image behind an nginx ingress. Set `image.repository` and `ingress.hosts` in `values.yaml`, and create a Kubernetes secret named `zkfetch-wrapper` with the keys listed in `templates/04-deployment.yaml`.
+```bash
+cp .env.example .env   # then fill in RECLAIM_APP_ID and RECLAIM_APP_SECRET
+docker compose up --build
+```
+
+The service listens on port 8003 and is usually ready within a few seconds; the compose health check allows up to 90 seconds for slower machines. To build and run without compose:
+
+```bash
+docker build -t zkfetch-wrapper .
+docker run --rm -p 8003:8003 --env-file .env zkfetch-wrapper
+```
+
+## Repository Layout
+
+- `index.js` is the Express server and the only entry point.
+- `zk-verify.js` is a local Groth16 verifier ported from Reclaim's attestor-core. It is wired into `/zkfetch` but only runs when a proof carries `zkReveal` data, which current zkFetch proofs do not (see Verification Modes below).
+- `tests/` are end-to-end scripts against the live attestor network, not unit tests.
+- `examples/selective-disclosure-demo.js` walks through a redaction scenario against a running server.
+- `lib/` holds the Reclaim ZK circuit artifacts (about 280 MB) that the SDK expects in `node_modules`; `npm start` and the Dockerfile copy them into place.
+- `docs/` explains the zkTLS architecture, verification layers, signature binding, and the REST API.
+
+## Contributing
+
+Pull requests are welcome. Run `npm run lint` before opening one; CI runs the same check. There is no maintainer on this project full time, so expect slow reviews.
 
 ## License
 
