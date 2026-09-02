@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Node.js wrapper for Reclaim Protocol zkFetch SDK with on-chain proof support",
   "main": "index.js",
+  "license": "Apache-2.0",
   "scripts": {
     "start": "cp --update=none -r ./lib/@reclaimprotocol/zk-symmetric-crypto/resources ./node_modules/@reclaimprotocol/zk-symmetric-crypto/ & node index.js",
     "dev": "nodemon index.js",
