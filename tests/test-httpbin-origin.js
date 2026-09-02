@@ -21,9 +21,9 @@
         "Sec-Fetch-User": "?1", 
         "Upgrade-Insecure-Requests": "1", 
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36", 
-        "X-Amzn-Trace-Id": "Root=1-694ac569-4e4fe0875951520922df098b"
+        "X-Amzn-Trace-Id": "Root=1-00000000-000000000000000000000000"
       }, 
-      "origin": "89.187.185.171", 
+      "origin": "203.0.113.10", 
       "url": "https://httpbin.org/get"
     }
  */

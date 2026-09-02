@@ -2,9 +2,12 @@
 
 Generate cryptographically verifiable proofs of API responses with **selective disclosure** using Reclaim Protocol's zkTLS technology.
 
+> **Project status: released as-is, not actively maintained.**
+> Zero Proof AI built this service in 2025 and 2026 as the proof backend for zero-knowledge tool calls by MCP (Model Context Protocol) agents. An agent calls a tool, the wrapper fetches the upstream API through Reclaim Protocol's attestor network, and the agent gets back a proof that the response is genuine with the sensitive fields redacted. The MCP client side lives in sibling repositories such as [zeroproof-python-sdk](https://github.com/Zero-Proof-AI/zeroproof-python-sdk) and [zeroproof-travel-poc](https://github.com/Zero-Proof-AI/zeroproof-travel-poc). We have since pivoted, so we are open-sourcing the code rather than letting it sit. Everything here worked end to end against Reclaim's Sepolia contracts when it was last run (July 2026). Issues and pull requests are welcome, but expect slow responses.
+
 ## Overview
 
-zkFetch Wrapper is a production-ready service that generates cryptographically verifiable proofs of API responses while protecting sensitive data. Perfect for privacy-preserving applications requiring trustless data verification.
+zkFetch Wrapper is a small Express service that generates cryptographically verifiable proofs of API responses while protecting sensitive data. Perfect for privacy-preserving applications requiring trustless data verification.
 
 ### Key Capabilities
 
@@ -50,8 +53,16 @@ zkFetch Wrapper is a production-ready service that generates cryptographically v
 
 ### 1. Installation
 
+Requires Node.js 18 or newer.
+
 ```bash
 npm install
+```
+
+One transitive dependency (`@reclaimprotocol/tls`) is pinned to a `git+ssh://` URL in the lockfile. If you do not have a GitHub SSH key configured, tell git to use HTTPS first:
+
+```bash
+git config --global url."https://github.com/".insteadOf git@github.com:
 ```
 
 ### 2. Get Reclaim Credentials
@@ -63,7 +74,7 @@ npm install
 
 ### 3. Configure Environment
 
-Create `.env`:
+Copy `.env.example` to `.env` and fill in your credentials:
 
 ```bash
 RECLAIM_APP_ID=0xYourAppIdHere
@@ -307,7 +318,10 @@ Shows:
 
 ### Run Tests
 
+All tests hit the live Reclaim attestor network and need `RECLAIM_APP_ID` and `RECLAIM_APP_SECRET` in `.env`. There are no offline unit tests. `npm test` runs the SDK verification test.
+
 ```bash
+npm test
 npm run test:selective
 npm run test:sdk
 npm run test:httpbin
@@ -462,6 +476,17 @@ Prove data matches pattern without revealing exact value:
 
 ---
 
+## Deployment
+
+The repo includes two reference deployment paths. Neither is required to run the service locally.
+
+- `infra/` is an AWS CDK app that builds the Docker image and publishes it to an ECR repository named `zkfetch-wrapper` in whatever account your credentials point at. `.github/workflows/deploy.yml` runs it on manual dispatch using GitHub OIDC; set the `AWS_DEPLOY_ROLE_ARN` repository variable to an IAM role that trusts this repo.
+- `charts/zkfetch-wrapper/` is a Helm chart for running the image behind an nginx ingress. Set `image.repository` and `ingress.hosts` in `values.yaml`, and create a Kubernetes secret named `zkfetch-wrapper` with the keys listed in `templates/04-deployment.yaml`.
+
+## License
+
+Apache License 2.0. See [LICENSE](./LICENSE).
+
 ## Resources
 
 - **Reclaim Protocol**: https://reclaimprotocol.org/
@@ -473,7 +498,7 @@ Prove data matches pattern without revealing exact value:
 
 ## Summary
 
-**zkFetch Wrapper provides production-ready zkTLS proofs with selective disclosure:**
+**zkFetch Wrapper provides zkTLS proofs with selective disclosure:**
 
 1. 🔐 **You decrypt locally** - Full control over plaintext
 2. 🎭 **You choose what to reveal** - Selective disclosure via JSON Path

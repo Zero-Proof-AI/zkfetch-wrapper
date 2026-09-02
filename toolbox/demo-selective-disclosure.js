@@ -64,7 +64,7 @@ async function demo() {
     console.log('         "Host": "httpbin.org",');
     console.log('         "User-Agent": "reclaim/0.0.1"');
     console.log('       },');
-    console.log('       "origin": "89.187.185.171",');
+    console.log('       "origin": "203.0.113.10",');
     console.log('       "url": "https://httpbin.org/get?booking_id=AA12345&credit_card=4111-1111-1111-1111&amount=500"');
     console.log('     }');
     console.log('   └─ What you see now:');

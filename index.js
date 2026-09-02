@@ -285,11 +285,6 @@ app.post('/verify', async (req, res) => {
     console.log('🔍 Verifying proof...');
     console.log('  Identifier:', proof.identifier);
     
-    // DEBUG: Save received proof for comparison
-    // const fs = require('fs');
-    // fs.writeFileSync('/tmp/received_proof.json', JSON.stringify(proof, null, 2));
-    // console.log('  Saved received proof to /tmp/received_proof.json');
-    
     const isValid = await verifyProofCompat(proof);
     
     console.log(isValid ? '✓ Proof is valid' : '✗ Proof is invalid');

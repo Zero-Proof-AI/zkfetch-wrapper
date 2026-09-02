@@ -7,7 +7,7 @@
   "scripts": {
     "start": "cp --update=none -r ./lib/@reclaimprotocol/zk-symmetric-crypto/resources ./node_modules/@reclaimprotocol/zk-symmetric-crypto/ & node index.js",
     "dev": "nodemon index.js",
-    "test": "node run-tests.js",
+    "test": "node tests/test-sdk-verification.js",
     "test:sdk": "node tests/test-sdk-verification.js",
     "test:httpbin": "node tests/test-httpbin-origin.js",
     "test:onchain": "node tests/test-onchain-quick.js",
