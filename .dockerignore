@@ -11,10 +11,6 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# CDK outputs
-cdk.out
-infra/cdk.out
-
 # Logs
 logs
 *.log
@@ -120,7 +116,7 @@ docs/
 .travis.yml
 
 # Tool-specific files
-toolbox/
+examples/
 tests/
 *.test.js
 *_test.js

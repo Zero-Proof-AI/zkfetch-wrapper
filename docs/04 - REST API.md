@@ -25,7 +25,6 @@ Default local port: 8003.
 | GET | /health | Service health and mode |
 | POST | /zkfetch | Generate proof bundle from remote HTTPS request |
 | POST | /verify | Verify proof signatures/claim consistency |
-| POST | /verify-full | Extended verification diagnostics |
 | POST | /transform-onchain | Convert proof to contract-facing format |
 
 ## 1) GET /health
@@ -250,63 +249,6 @@ Converts a proof into contract-facing fields.
 }
 ```
 
-## 5) POST /verify-full
-
-Runs extended verification path if configured in this wrapper.
-
-### Request Body
-
-```json
-{
-  "proof": {},
-  "options": {}
-}
-```
-
-### Response shape
-
-```json
-{
-  "success": true,
-  "valid": true
-}
-```
-
-Additional fields may appear depending on verifier output.
-
-### Response (live sample shape)
-
-```json
-{
-  "success": true,
-  "valid": true,
-  "timestamp": 1784671497011,
-  "verifications": {
-    "signatures": {
-      "valid": {
-        "isVerified": false,
-        "error": { "name": "ProofNotValidatedError" },
-        "data": [],
-        "publicData": []
-      },
-      "method": "signature-based",
-      "checks": {
-        "attestorSignatures": { "isVerified": false },
-        "witnessAddresses": { "isVerified": false },
-        "identifierIntegrity": { "isVerified": false },
-        "timestamp": { "isVerified": false }
-      }
-    },
-    "zkProof": {
-      "available": false,
-      "note": "zkSNARK verified by attestors, signatures confirm attestation"
-    }
-  }
-}
-```
-
-Note: `/verify-full` currently returns richer diagnostics from `zksnark-verifier.js`; nested signature fields may reflect structured js-sdk results rather than simple booleans.
-
 ## Error Responses
 
 Typical API error shape:
@@ -321,7 +263,7 @@ Typical API error shape:
 Examples:
 
 - Missing required url in /zkfetch
-- Missing required proof in /verify, /verify-full, /transform-onchain
+- Missing required proof in /verify, /transform-onchain
 - Upstream sdk/network failures
 
 ## Selective Disclosure Notes

@@ -50,7 +50,7 @@ Reclaim Protocol uses both zkSNARKs (Groth16) and ECDSA signatures for end-to-en
 - In js-sdk 5.x, result can be structured (for example, `isVerified`) rather than only a bare boolean.
 
 ### Layer C: Application-level checks in this wrapper
-- Endpoint checks (`/verify`, `/verify-full`) combine signature validation with diagnostics.
+- Endpoint check (`/verify`) validates attestor signatures and claim integrity.
 - On-chain preparation (`/transform-onchain`) maps proof material to contract-call shape.
 
 ## How It Works
@@ -219,7 +219,6 @@ function recoverSignersOfSignedClaim(claim) {
   - tries `verifyProof(proof, { dangerouslyDisableContentValidation: true })`
   - falls back to `verifyProof(proof)`
   - normalizes structured/boolean results to a strict boolean.
-- `/verify-full` adds expanded diagnostics path.
 - `/transform-onchain` prepares `claimInfo` + `signedClaim` for contract calls.
 
 ## Local ZK Verification in This Repo

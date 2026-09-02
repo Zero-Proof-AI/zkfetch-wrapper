@@ -80,10 +80,6 @@ public
 .out
 .storybook-out
 
-# CDK outputs
-cdk.out
-infra/cdk.out
-
 # Temporary folders
 tmp/
 temp/

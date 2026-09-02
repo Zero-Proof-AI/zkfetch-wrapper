@@ -194,7 +194,6 @@ sequenceDiagram
 Current endpoint set in wrapper:
 - `POST /zkfetch`: Generate proof, run local verification, optionally transform for on-chain usage.
 - `POST /verify`: Off-chain verification endpoint using `verifyProofCompat`.
-- `POST /verify-full`: Extended verification route using local verifier path.
 - `POST /transform-onchain`: Convert proof for contract-facing structures.
 - `GET /health`: Service/mode health (`production` vs `mock`).
 
