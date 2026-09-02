@@ -1,21 +1,28 @@
 name: Deploy CDK Stack
 
+# Manual only. This workflow builds the Docker image and pushes it to ECR in
+# whatever AWS account the OIDC role below lives in. It is kept as a reference
+# deployment path; the project is not actively deployed anywhere.
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag to publish (e.g. latest or v1.2.3)"
+        required: false
+        default: "latest"
+
+permissions:
+  id-token: write   # required for OIDC role assumption
+  contents: read
 
 jobs:
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
-    
+
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,11 +46,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Configure AWS credentials
+      # Uses GitHub OIDC instead of long-lived access keys. Create an IAM role
+      # trusted by token.actions.githubusercontent.com for this repo and store
+      # its ARN in the AWS_DEPLOY_ROLE_ARN repository variable.
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Docker Buildx
@@ -63,12 +72,6 @@ jobs:
       - name: CDK Deploy
         working-directory: ./infra
         run: |
-          if [[ "${{ github.ref_type }}" == "branch" && "${{ github.ref_name }}" == "main" ]]; then
-            TAG="latest"  # Just a marker
-          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
-            TAG="${{ github.ref_name }}"
-          else
-            TAG="dev-$(git rev-parse --short HEAD)"
-          fi
+          TAG="${{ inputs.image_tag || 'latest' }}"
           echo "Deploying with image_tag=$TAG"
-          cdk deploy --all --require-approval never --verbose --context image_tag=$TAG
+          cdk deploy --all --require-approval never --context image_tag=$TAG

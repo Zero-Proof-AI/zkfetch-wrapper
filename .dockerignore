@@ -120,7 +120,7 @@ docs/
 .travis.yml
 
 # Tool-specific files
-.toolbox/
+toolbox/
 tests/
 *.test.js
 *_test.js
